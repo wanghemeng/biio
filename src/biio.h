@@ -18,7 +18,7 @@
 
 #include "mmio_highlevel.h"
 
-int binary_read_csv(int *row, int *col, int *nnz, int **row_ptr, int **col_idx, double **val, char *filename)
+int binary_read_csr(int *row, int *col, int *nnz, int **row_ptr, int **col_idx, double **val, char *filename)
 {
     FILE *fp = NULL;
     fp = fopen(filename, "r+");
@@ -70,7 +70,7 @@ int binary_read_csv(int *row, int *col, int *nnz, int **row_ptr, int **col_idx, 
     return 0;
 }
 
-void binary_write_csv(int row, int col, int nnz, int *row_ptr, int *col_idx, double *val, char *filename)
+void binary_write_csr(int row, int col, int nnz, int *row_ptr, int *col_idx, double *val, char *filename)
 {
 
     INFO_LOG("write binary file %s\n", filename);
@@ -95,31 +95,55 @@ void binary_write_csv(int row, int col, int nnz, int *row_ptr, int *col_idx, dou
     return;
 }
 
-void read_Dmatrix(int *row, int *col, int *nnz, int **row_ptr, int **col_idx, double **val, char *filename)
+void read_Dmatrix_convert(int *row, int *col, int *nnz, int **row_ptr, int **col_idx, double **val, int *isSymmeticeR, char *filename)
 {
-    int isSymmeticeR;
     char binary_name[512];
     int file_length = strlen(filename);
     strcpy(binary_name, filename);
-    binary_name[file_length - 1] = 'v';
-    binary_name[file_length - 2] = 's';
-    binary_name[file_length - 3] = 't';
-    int flag = binary_read_csv(row, col, nnz, row_ptr, col_idx, val, binary_name);
+    binary_name[file_length - 1] = 'd';
+    binary_name[file_length - 2] = 'b';
+    binary_name[file_length - 3] = 'c';
+    int flag = binary_read_csr(row, col, nnz, row_ptr, col_idx, val, binary_name);
     if (flag == -1)
     {
         INFO_LOG("read file name is %s\n", filename);
-        mmio_info(row, col, nnz, &isSymmeticeR, filename);
+        mmio_info(row, col, nnz, isSymmeticeR, filename);
+        INFO_LOG("row %d, col %d, nnz %d\n", *row, *col, *nnz);
         *row_ptr = (int *)malloc(sizeof(int) * (*row + 1));
         *col_idx = (int *)malloc(sizeof(int) * (*nnz));
         *val = (double *)malloc(sizeof(double) * (*nnz));
         mmio_data(*row_ptr, *col_idx, *val, filename);
         INFO_LOG("begin write binary file\n");
-        binary_write_csv(*row, *col, *nnz, *row_ptr, *col_idx, *val, binary_name);
+        binary_write_csr(*row, *col, *nnz, *row_ptr, *col_idx, *val, binary_name);
         INFO_LOG("end write binary file\n");
     }
     else
     {
         INFO_LOG("read binary file %s\n", binary_name);
+    }
+    return;
+}
+
+void read_Dmatrix(int *row, int *col, int *nnz, int **row_ptr, int **col_idx, double **val, int *isSymmeticeR, char *filename)
+{
+    int name_len = strlen(filename);
+    if (filename[name_len - 3] == 'c' && filename[name_len - 2] == 'b' && filename[name_len - 1] == 'd')
+    {
+        INFO_LOG("read binary file %s\n", filename);
+        binary_read_csr(row, col, nnz, row_ptr, col_idx, val, filename);
+    }
+    else if (filename[name_len - 3] == 'm' && filename[name_len - 2] == 't' && filename[name_len - 1] == 'x')
+    {
+        INFO_LOG("read regular file %s\n", filename);
+        mmio_info(row, col, nnz, isSymmeticeR, filename);
+        *row_ptr = (int *)malloc(sizeof(int) * (*row + 1));
+        *col_idx = (int *)malloc(sizeof(int) * (*nnz));
+        *val = (double *)malloc(sizeof(double) * (*nnz));
+        mmio_data(*row_ptr, *col_idx, *val, filename);
+    }
+    else
+    {
+        INFO_LOG("File type unsupport\n");
     }
     return;
 }

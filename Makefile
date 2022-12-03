@@ -1,8 +1,8 @@
 .PHONY: test compile convert clean
 
-data_path="/home/hemeng/Documents/biio/matrices/"
+data_path="/home/hemeng/Documents/Data/matrices/"
 
-all: compile convert
+all: compile test
 
 test:
 	gcc ./src/test.c -o ./bin/test
